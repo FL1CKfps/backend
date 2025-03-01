@@ -5,18 +5,15 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const app = express();
 
-// Configure CORS properly
+// Replace the current CORS configuration with this simpler version
 app.use(cors({
-  // Either use a whitelist of origins:
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://yourproductionsite.com'],
-  // Or revert to wildcard (less secure but simpler for development):
-  // origin: '*',
+  origin: '*', // Allow all origins for development
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: false
 }));
 
-// For preflight requests
+// Keep the preflight options handler
 app.options('*', cors());
 
 // Parse JSON requests
