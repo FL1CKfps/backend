@@ -7,7 +7,10 @@ const app = express();
 
 // Configure CORS properly
 app.use(cors({
-  origin: '*', // In production, replace with specific domains
+  // Either use a whitelist of origins:
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://yourproductionsite.com'],
+  // Or revert to wildcard (less secure but simpler for development):
+  // origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: false
@@ -219,6 +222,23 @@ app.post('/api/update-user-credits', async (req, res) => {
       details: error.message || 'Unknown error'
     });
   }
+});
+
+// Add this near the top of your routes
+app.get('/cors-test', (req, res) => {
+  // Log the origin
+  console.log('Request origin:', req.headers.origin);
+  
+  // Set explicit CORS headers for this route
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  
+  // Send a simple response
+  res.json({ 
+    success: true, 
+    message: 'CORS test successful',
+    receivedOrigin: req.headers.origin
+  });
 });
 
 // Start the server
