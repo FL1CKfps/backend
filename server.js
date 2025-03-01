@@ -5,22 +5,16 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const app = express();
 
-// First try removing cors middleware altogether
-// app.use(cors());
+// Configure CORS properly
+app.use(cors({
+  origin: '*', // In production, replace with specific domains
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+}));
 
-// Instead, use a direct middleware for CORS
-app.use((req, res, next) => {
-  // Simple CORS headers with no conditions
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  
-  next();
-});
+// For preflight requests
+app.options('*', cors());
 
 // Parse JSON requests
 app.use(express.json());
@@ -29,6 +23,29 @@ app.use(express.json());
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || '',
   key_secret: process.env.RAZORPAY_KEY_SECRET || ''
+});
+
+// Root endpoint with API information
+app.get('/', (req, res) => {
+  res.json({
+    name: 'PostSync Payment API',
+    status: 'online',
+    endpoints: {
+      health: '/health',
+      razorpayOrder: '/api/razorpay-order',
+      razorpayVerify: '/api/razorpay-verify'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    razorpayInitialized: !!razorpay
+  });
 });
 
 // Create Razorpay order endpoint
@@ -98,34 +115,10 @@ app.post('/api/razorpay-verify', (req, res) => {
   }
 });
 
-// Simple status endpoint
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    razorpayInitialized: !!razorpay
-  });
-});
-
-// Add this near your other route handlers
-app.get('/', (req, res) => {
-  res.json({
-    name: 'PostSync Payment API',
-    status: 'online',
-    endpoints: {
-      health: '/health',
-      razorpayOrder: '/api/razorpay-order',
-      razorpayVerify: '/api/razorpay-verify'
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
 // Test endpoint for CORS
 app.get('/test-cors', (req, res) => {
   console.log('CORS test request received');
   console.log('Origin:', req.headers.origin);
-  console.log('Response headers:', res._headers);
   
   res.json({
     message: 'CORS test successful',
