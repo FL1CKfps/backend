@@ -5,16 +5,20 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const app = express();
 
-// Replace the current CORS configuration with this simpler version
-app.use(cors({
-  origin: '*', // Allow all origins for development
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false
-}));
-
-// Keep the preflight options handler
-app.options('*', cors());
+// Add this middleware to set CORS headers for all routes
+app.use((req, res, next) => {
+  // Set CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
 // Parse JSON requests
 app.use(express.json());
