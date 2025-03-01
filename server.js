@@ -131,6 +131,96 @@ app.get('/test-cors', (req, res) => {
   });
 });
 
+// Add a new endpoint to your server.js
+app.post('/api/update-user-credits', async (req, res) => {
+  try {
+    const { 
+      userId, 
+      plan, 
+      credits,
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature 
+    } = req.body;
+    
+    // 1. Verify payment signature first
+    if (razorpay_signature === 'upi_payment') {
+      // Skip signature verification for UPI payments
+      isSignatureValid = true;
+    } else {
+      const generatedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest('hex');
+      
+      const isSignatureValid = generatedSignature === razorpay_signature;
+      
+      if (!isSignatureValid) {
+        return res.status(400).json({ success: false, error: 'Invalid signature' });
+      }
+    }
+    
+    // 2. Update user credits in Firebase (using admin SDK)
+    const admin = require('firebase-admin');
+    
+    // Initialize Firebase Admin if not already initialized
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        })
+      });
+    }
+    
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(userId);
+    
+    // Get current user data
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const userData = userDoc.data();
+    const currentCredits = userData.credits || 0;
+    
+    // Calculate amount based on plan
+    const amount = plan === 'basic' ? 1 : plan === 'starter' ? 499 : 1499;
+    
+    // Update user data
+    await userRef.update({
+      credits: currentCredits + credits,
+      'plan.imagesGenerated': admin.firestore.FieldValue.increment(0),
+      'plan.name': plan,
+      'plan.purchasedAt': new Date().toISOString(),
+      'plan.purchaseHistory': admin.firestore.FieldValue.arrayUnion({
+        date: new Date().toISOString(),
+        plan: plan,
+        credits: credits,
+        amount: amount,
+        paymentMethod: 'razorpay',
+        transactionId: razorpay_payment_id,
+        orderId: razorpay_order_id
+      })
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Payment verified and credits updated successfully',
+      newCredits: currentCredits + credits
+    });
+  } catch (error) {
+    console.error('Error updating user credits:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to update user credits',
+      details: error.message || 'Unknown error'
+    });
+  }
+});
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
