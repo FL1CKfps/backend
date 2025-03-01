@@ -5,16 +5,22 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const app = express();
 
-// Enable CORS for all origins (for testing only)
-app.use(cors({
-  origin: '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// First try removing cors middleware altogether
+// app.use(cors());
 
-// Handle OPTIONS requests explicitly
-app.options('*', cors());
+// Instead, use a direct middleware for CORS
+app.use((req, res, next) => {
+  // Simple CORS headers with no conditions
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
 
 // Parse JSON requests
 app.use(express.json());
@@ -112,6 +118,23 @@ app.get('/', (req, res) => {
       razorpayVerify: '/api/razorpay-verify'
     },
     timestamp: new Date().toISOString()
+  });
+});
+
+// Test endpoint for CORS
+app.get('/test-cors', (req, res) => {
+  console.log('CORS test request received');
+  console.log('Origin:', req.headers.origin);
+  console.log('Response headers:', res._headers);
+  
+  res.json({
+    message: 'CORS test successful',
+    headers: {
+      allowOrigin: res.getHeader('Access-Control-Allow-Origin'),
+      allowMethods: res.getHeader('Access-Control-Allow-Methods'),
+      allowHeaders: res.getHeader('Access-Control-Allow-Headers')
+    },
+    requestHeaders: req.headers
   });
 });
 
