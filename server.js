@@ -5,11 +5,16 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const app = express();
 
-// Enable CORS for all origins your frontend might use
+// Enable CORS for all origins (for testing only)
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://postsync-2b71a.web.app', 'https://postsync-2b71a.firebaseapp.com'],
-  credentials: true
+  origin: '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Handle OPTIONS requests explicitly
+app.options('*', cors());
 
 // Parse JSON requests
 app.use(express.json());
