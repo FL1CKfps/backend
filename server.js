@@ -96,6 +96,20 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Add this near your other route handlers
+app.get('/', (req, res) => {
+  res.json({
+    name: 'PostSync Payment API',
+    status: 'online',
+    endpoints: {
+      health: '/health',
+      razorpayOrder: '/api/razorpay-order',
+      razorpayVerify: '/api/razorpay-verify'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
