@@ -151,13 +151,10 @@ app.get('/test-cors', (req, res) => {
   });
 });
 
-// Add a new endpoint to your server.js
+// Replace the update-user-credits endpoint with this simplified version
 app.post('/api/update-user-credits', async (req, res) => {
   try {
     const { 
-      userId, 
-      plan, 
-      credits,
       razorpay_payment_id,
       razorpay_order_id,
       razorpay_signature 
@@ -180,49 +177,18 @@ app.post('/api/update-user-credits', async (req, res) => {
       }
     }
     
-    // 2. Update user credits in Firebase (using admin SDK)
-    const db = admin.firestore();
-    const userRef = db.collection('users').doc(userId);
-    
-    // Get current user data
-    const userDoc = await userRef.get();
-    if (!userDoc.exists) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-    
-    const userData = userDoc.data();
-    const currentCredits = userData.credits || 0;
-    
-    // Calculate amount based on plan
-    const amount = plan === 'basic' ? 1 : plan === 'starter' ? 499 : 1499;
-    
-    // Update user data
-    await userRef.update({
-      credits: currentCredits + credits,
-      'plan.imagesGenerated': admin.firestore.FieldValue.increment(0),
-      'plan.name': plan,
-      'plan.purchasedAt': new Date().toISOString(),
-      'plan.purchaseHistory': admin.firestore.FieldValue.arrayUnion({
-        date: new Date().toISOString(),
-        plan: plan,
-        credits: credits,
-        amount: amount,
-        paymentMethod: 'razorpay',
-        transactionId: razorpay_payment_id,
-        orderId: razorpay_order_id
-      })
-    });
-    
+    // Return success - credits will be updated in frontend
     res.json({ 
       success: true, 
-      message: 'Payment verified and credits updated successfully',
-      newCredits: currentCredits + credits
+      message: 'Payment verified successfully',
+      paymentId: razorpay_payment_id,
+      orderId: razorpay_order_id
     });
   } catch (error) {
-    console.error('Error updating user credits:', error);
+    console.error('Error verifying payment:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to update user credits',
+      error: 'Failed to verify payment',
       details: error.message || 'Unknown error'
     });
   }
